@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@apidevtools/swagger-parser": "^10.1.0"
+  },
+  "name": "global-apis",
+  "version": "1.0.0",
+  "main": "swagger-to-ts.js",
+  "devDependencies": {},
+  "scripts": {
+    "api": "node --env-file=.env swagger-to-ts.js -url",
+    "api—auto": "node --env-file=.env swagger-to-ts.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
