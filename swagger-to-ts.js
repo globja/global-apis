@@ -225,7 +225,7 @@ function pathsToTextItemReq(path, name, data, tagsList) {
         }
         const keys = Object.keys(data.requestBody.content)
         if (keys.length > 0) {
-            reqdate.header.accept = keys[0]
+            reqdate.header['"Content-Type"'] = keys[0]
             reqdate.body.schema = data.requestBody.content[keys[0]].schema
         }
     }
