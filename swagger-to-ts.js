@@ -79,6 +79,79 @@ function schemasToText(schemas) {
     return obj
 }
 
+/** 子结构递归 */
+function itemSion(data) {
+    const obj = {}
+    for (const item in data) {
+        // console.log('参数', item, data[item].type);
+        obj[item] = data[item].type
+        if (data[item].type == 'array') {
+            obj[item] = arraySion(data[item].items)
+        }
+        else if (data[item].type == 'object') {
+            obj[item] = itemSion(data[item].properties)
+        }
+        else if (data[item].type == 'integer') {
+            obj[item] = 'number'
+        }
+    }
+    return obj
+}
+
+function arraySion(data) {
+
+    if (data.type == 'array') {
+        return `Array<${arraySion(data.items)}>`
+    }
+    else if (data.type == 'object') {
+        return `Array<${objectToString(itemSion(data.properties))}>`
+    }
+    else {
+        return `Array<${data.type}>`
+    }
+
+}
+
+function objectToString(obj, indent = '') {
+    let str = '{';
+    for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            const value = obj[key];
+            const newIndent = indent + '  '; // 增加缩进
+            if (typeof value === 'object' && value !== null) {
+                // 如果是对象，递归处理，并在值前添加逗号
+                str += `\n${newIndent}${key}: ${objectToString(value, newIndent)}`;
+            } else {
+                // 基本类型值，直接拼接字符串，并在值前添加逗号
+                str += `\n${newIndent}${key}: ${value} `;
+            }
+        }
+    }
+    // 移除最后一个逗号和换行符，并添加闭括号
+    return str.trim() + '\n' + indent + '}';
+}
+
+// function objectToString(obj, indent = '') {
+//     let str = '{';
+//     for (let key in obj) {
+//         if (obj.hasOwnProperty(key)) {
+//             const value = obj[key];
+//             const newIndent = indent + '  '; // 增加缩进
+
+//             if (typeof value === 'object' && value !== null) {
+//                 // 如果是对象，递归处理
+//                 str += `${newIndent}${key}:\n${objectToString(value, newIndent)}`;
+//             } else {
+//                 // 基本类型值，直接拼接字符串
+//                 str += `${newIndent}${key}: ${value}\n`;
+//             }
+//         }
+//     }
+//     // 移除最后一个换行符
+//     return str.trim().slice(0, -1) + '\n' + indent + '}';
+// }
+
+
 // 
 function paramsToTextItem(name, data) {
     // console.log(name, data);
@@ -86,7 +159,9 @@ function paramsToTextItem(name, data) {
     /** 替换类型字符串 */
     if ('$ref' in data.schema) { type = data.schema['$ref'].replace(/\#\/components\/schemas\//i, '') }
     if ('type' in data.schema) { type = data.schema['type'] }
-    if (type == 'array') { type = 'Array<any>' }
+    if (type == 'array') { type = arraySion(data[item].items) }
+
+    if (type == 'object') { type = objectToString(itemSion(data.schema.properties)) }
     // 拼接
     return `/** ${data.description} **/
             ${name}${data.required ? '' : '?'}:${data.schema ? type : 'any'};
@@ -114,7 +189,9 @@ function bodyToText(data) {
     /** 替换类型字符串 */
     if ('$ref' in data.schema) { type = data.schema['$ref'].replace(/\#\/components\/schemas\//i, '') }
     if ('type' in data.schema) { type = data.schema['type'] }
-    if (type == 'array') { type = 'Array<any>' }
+    if (type == 'array') { type = arraySion(data[item].items) }
+
+    if (type == 'object') { type = objectToString(itemSion(data.schema.properties)) }
 
     return `${data.schema ? type : 'any'};
     `
@@ -176,7 +253,8 @@ function pathsToTextItemReq(path, name, data, tagsList) {
                 let type = ''
                 if ('$ref' in data2.schema) { type = data2.schema['$ref'].replace(/\#\/components\/schemas\//i, '') }
                 if ('type' in data2.schema) { type = data2.schema['type'] }
-                if (type == 'array') { type = 'Array<any>' }
+                if (type == 'array') { type = arraySion(data[item].items) }
+                if (type == 'object') { type = objectToString(itemSion(data2.schema.properties)) }
                 res3 = `${data2.schema ? type : 'any'}`
             }
         }
@@ -282,15 +360,15 @@ async function main(url) {
     console.log("解析完成:", info.title);
 };
 
-if (process.argv[2]=='-url') {
-    if (process.argv.length==4){
+if (process.argv[2] == '-url') {
+    if (process.argv.length == 4) {
         main(process.argv[3]);
-    }else{
+    } else {
 
         main(process.env.VITE_API_URL);
     }
 } else {
-    console.log('自动模式:','更新全部服务接口');
+    console.log('自动模式:', '更新全部服务接口');
     console.log('正在获取尝试从system服务，获取服务列表:', process.env.VITE_API_URL + '/system/config/get-service-list');
     fetch(process.env.VITE_API_URL + '/api/system/config/get-service-list').then(res => res.json()).then(async (res) => {
         const { data } = res
